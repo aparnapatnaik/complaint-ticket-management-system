@@ -1,0 +1,7 @@
+services:
+  complaint-system:
+    build: .
+    container_name: complaint-system
+    ports:
+      - "8080:80"
+    restart: unless-stopped
