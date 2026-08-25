@@ -1,0 +1,65 @@
+<?php
+
+require_once "../config/database.php";
+
+$message = "";
+
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    $name = trim($_POST["name"]);
+    $email = trim($_POST["email"]);
+    $password = $_POST["password"];
+
+    if ($name === "" || $email === "" || $password === "") {
+        $message = "All fields are required.";
+    } else {
+
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+        $stmt = $conn->prepare(
+            "INSERT INTO users (name, email, password) VALUES (?, ?, ?)"
+        );
+
+        $stmt->bind_param("sss", $name, $email, $hashedPassword);
+
+        if ($stmt->execute()) {
+            $message = "Registration successful.";
+        } else {
+            $message = "Registration failed. Email may already exist.";
+        }
+
+        $stmt->close();
+    }
+}
+
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Registration</title>
+</head>
+
+<body>
+
+<h1>User Registration</h1>
+
+<p><?php echo htmlspecialchars($message); ?></p>
+
+<form method="POST">
+
+    <label>Name</label><br>
+    <input type="text" name="name" required><br><br>
+
+    <label>Email</label><br>
+    <input type="email" name="email" required><br><br>
+
+    <label>Password</label><br>
+    <input type="password" name="password" required><br><br>
+
+    <button type="submit">Register</button>
+
+</form>
+
+</body>
+</html>
