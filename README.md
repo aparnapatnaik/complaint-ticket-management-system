@@ -1,65 +1,42 @@
 # Complaint Ticket Management System
 
-A PHP and MySQL based Complaint Ticket Management System deployed using Docker on AWS and automated using Jenkins CI/CD.
+A PHP and MySQL based Complaint Ticket Management System deployed on AWS using Docker, Jenkins CI/CD, and multiple AWS services.
 
-This project was extended from a basic web application into a cloud-based DevOps deployment using AWS services for storage, messaging, monitoring, auditing, networking, load balancing and scalability.
+This project demonstrates how a traditional PHP/MySQL application can be transformed into a cloud-based DevOps deployment using containerization, automated deployment, cloud storage, messaging, monitoring, auditing, load balancing, and auto scaling.
 
-## Project Overview
-
-The application allows users to submit complaints and administrators to manage complaint tickets.
-
-The original application was built using:
-
-- PHP
-- MySQL
-- Bootstrap
-- Apache
-
-During the project, I containerized the application using Docker and deployed it on AWS. I also integrated multiple AWS services and created a CI/CD workflow using Jenkins and GitHub.
-
-## Architecture
+## Project Architecture
 
 User
-  |
-  v
+↓
 Application Load Balancer
-  |
-  v
+↓
 EC2 / Auto Scaling
-  |
-  v
+↓
 Docker Container
-  |
-  v
+↓
 PHP + Apache Application
-  |
-  v
+↓
 Amazon RDS MySQL
 
-Supporting AWS Services:
+Supporting AWS services:
 
-- Amazon S3 - file and attachment storage
-- Amazon SQS - asynchronous complaint events
-- Amazon CloudWatch - monitoring and metrics
-- AWS CloudTrail - API auditing
+- Amazon S3 - complaint file and attachment storage
+- Amazon SQS - asynchronous complaint event messaging
+- Amazon CloudWatch - monitoring and system metrics
+- AWS CloudTrail - API activity auditing
+- AWS IAM - permissions and access control
 - Amazon VPC - networking
-- IAM - permissions and roles
 - Application Load Balancer - traffic distribution
-- Auto Scaling - scalability
-
-DevOps Tools:
-
-- Git
-- GitHub
-- Docker
-- Docker Compose
-- Jenkins
+- Auto Scaling - application scalability
+- Jenkins - CI/CD automation
+- GitHub - source code management
+- Docker - application containerization
 
 ## Technologies Used
 
 ### Application
 
-- PHP 8.3
+- PHP
 - MySQL
 - Bootstrap
 - Apache
@@ -79,472 +56,289 @@ DevOps Tools:
 
 ### DevOps
 
-- Git
-- GitHub
 - Docker
 - Docker Compose
 - Jenkins
+- Git
+- GitHub
 
-## Amazon EC2
+## AWS Implementation
 
-The application was deployed on an Ubuntu EC2 instance.
+### Amazon EC2
 
-The EC2 instance acts as the application host and runs the Docker-based PHP application.
+The application is deployed on an Ubuntu EC2 instance.
 
-The application container is exposed through Docker and runs the complaint management application.
+The EC2 instance uses an IAM role so that AWS services can be accessed without storing long-term AWS access keys directly in the application.
 
-## Amazon RDS
+### Amazon RDS
 
-Amazon RDS was used as the managed MySQL database layer.
+Amazon RDS is used as the managed MySQL database layer.
 
-Instead of depending only on a MySQL database running inside the application environment, the application was configured to communicate with the managed RDS database.
+This separates the database from the application container and provides a more production-oriented architecture.
 
-This separates the application layer from the database layer.
+### Amazon S3
 
-## Amazon S3
+Amazon S3 is used to store complaint-related files and attachments.
 
-Amazon S3 was implemented for storing complaint-related files and attachments.
+Objects are organized using a structure similar to:
 
-Complaint files are stored using an organized object structure:
+`complaints/<complaint-id>/<file>`
 
-complaints/<complaint-id>/<file>
+This keeps uploaded files separate from the application server filesystem.
 
-S3 was tested directly from the EC2 instance.
+### Amazon SQS
 
-Example verification:
+Amazon SQS is used for asynchronous complaint event messaging.
 
-aws s3 ls s3://<bucket>/complaints/ --recursive
-
-Uploaded complaint files were successfully visible in the S3 bucket.
-
-## Amazon SQS
-
-Amazon SQS was implemented for complaint event messaging.
-
-When a complaint is submitted, the application sends a message to the SQS queue.
+When a complaint is submitted, the application sends an event to the SQS queue.
 
 Queue:
 
-complaint-events
+`complaint-events`
 
-The application code was updated to use the AWS SDK and SQS client.
+This demonstrates decoupled communication between application components.
 
-SQS messages were successfully generated and verified in the queue.
+### Amazon CloudWatch
 
-This demonstrates asynchronous communication between the application and a messaging service.
+CloudWatch was configured to collect EC2 system metrics using the custom namespace:
 
-## Amazon CloudWatch
+`ComplaintSystem/EC2`
 
-Amazon CloudWatch was configured for monitoring the EC2 environment.
+Metrics verified during implementation include:
 
-The custom namespace used by the project is:
+- `disk_used_percent`
+- `mem_used_percent`
+- `TestMetric`
 
-ComplaintSystem/EC2
+### AWS CloudTrail
 
-Metrics verified:
+CloudTrail was configured to record AWS API activity.
 
-- disk_used_percent
-- mem_used_percent
-- TestMetric
+Trail:
 
-The metrics were successfully listed using the AWS CLI.
+`complaint-system-cloudtrail`
 
-CloudWatch helped provide visibility into system resource usage.
+Logging was successfully verified with:
 
-## AWS CloudTrail
+`IsLogging: true`
 
-AWS CloudTrail was configured to record AWS API activity.
+CloudTrail was also used to verify AWS activity related to services such as SQS.
 
-Trail name:
+### Application Load Balancer
 
-complaint-system-cloudtrail
+An Application Load Balancer was configured as the public entry point for the application.
 
-CloudTrail logging was verified successfully.
+It distributes incoming traffic to the EC2 application infrastructure.
 
-The verification returned:
+### Auto Scaling
 
-IsLogging: true
+Auto Scaling was configured to provide scalable EC2 capacity.
 
-CloudTrail also provided a way to inspect AWS API activity related to the project.
+This allows the infrastructure to respond to changing application demand and improves availability.
 
-## Application Load Balancer
+### Amazon VPC
 
-An Application Load Balancer was configured in front of the application.
+The AWS infrastructure runs inside an Amazon VPC using networking components including:
 
-The ALB provides a stable entry point for users and distributes traffic to the application infrastructure.
-
-This creates a more production-like architecture compared with exposing a single EC2 instance directly.
-
-## Auto Scaling
-
-Auto Scaling was configured for the EC2 application infrastructure.
-
-The purpose of Auto Scaling is to automatically adjust application capacity according to the configured scaling requirements.
-
-This improves availability and provides a foundation for handling increased traffic.
-
-## Amazon VPC
-
-The AWS infrastructure runs inside an Amazon VPC.
-
-The networking setup includes components such as:
-
-- VPC
 - Subnets
 - Route tables
 - Security groups
 - Internet connectivity
 
-Security groups were used to control access between the required components.
-
-## IAM
-
-IAM was important throughout the AWS implementation.
-
-The EC2 instance uses an IAM role:
-
-ComplaintSystemEC2Role
-
-The role provides the permissions required by the application and AWS CLI without requiring AWS access keys to be stored directly inside the application.
-
 ## Docker
 
-The PHP application was containerized using Docker.
+The PHP application is containerized using Docker.
 
-The Dockerfile was updated to support the AWS SDK dependencies.
+The Docker image includes:
 
-The image uses:
+- PHP 8.3
+- Apache
+- MySQL/PDO extensions
+- ZIP extension
+- Composer
 
-PHP 8.3
-Apache
+Composer dependencies are installed during the Docker image build.
 
-Required PHP extensions include:
-
-- mysqli
-- PDO
-- PDO MySQL
-- ZIP
-
-Composer was also added to the Docker image.
-
-The Dockerfile installs Composer dependencies during the image build:
-
-composer install --no-dev --optimize-autoloader
-
-Docker Compose was used to manage the application environment.
-
-The running application container was verified using:
-
-docker ps
-
-The application container name is:
-
-complaint-app
+Docker Compose was also used to manage the application environment.
 
 ## Jenkins CI/CD
 
-Jenkins was used to automate the application deployment process.
+Jenkins was used to automate the application deployment workflow.
 
-The general workflow is:
+The overall workflow is:
 
 GitHub
-  |
-  v
+↓
 Jenkins
-  |
-  v
+↓
 Docker Build
-  |
-  v
+↓
 Docker Deployment
-  |
-  v
-AWS EC2
+↓
+AWS Infrastructure
 
-The Jenkins workspace contains the project source code and is used during the deployment process.
+A Jenkins pipeline was created using a `Jenkinsfile`.
 
 ## Git and GitHub
 
 Git was used for version control and GitHub was used as the remote repository.
 
-Repository:
+AWS and DevOps changes were organized in the branch:
 
-https://github.com/aparnapatnaik/complaint-ticket-management-system
+`aws-cloud-devops`
 
-A dedicated branch was created for the AWS and DevOps implementation:
+The branch was pushed successfully to GitHub.
 
-aws-cloud-devops
+Latest AWS/DevOps commit:
 
-The AWS/DevOps changes were committed with:
-
-Add AWS cloud DevOps integration
-
-The branch was successfully pushed to GitHub.
-
-## Problems Faced and How I Solved Them
-
-### 1. Git Dubious Ownership
-
-When I initially tried to use Git inside the Jenkins workspace, Git returned:
-
-fatal: detected dubious ownership in repository
-
-The reason was that the repository was inside the Jenkins workspace and ownership did not match the ubuntu user.
-
-I solved this by adding the Jenkins workspace as a Git safe directory:
-
-git config --global --add safe.directory /var/lib/jenkins/workspace/complaint-ticket-management
-
-### 2. Git Branch Permission Error
-
-When creating the branch, Git returned:
-
-Unable to create refs/heads/aws-cloud-devops.lock
-
-Permission denied
-
-The .git directory was owned by another user.
-
-I fixed the Git directory ownership using:
-
-sudo chown -R ubuntu:ubuntu .git
-
-After that, I successfully created the branch:
-
-git switch -c aws-cloud-devops
-
-### 3. IAM Permission Problems
-
-During AWS configuration, some AWS CLI commands initially returned permission errors.
-
-For example, CloudWatch metric operations required the correct IAM permissions.
-
-I identified the missing permissions and updated the EC2 IAM role.
-
-After updating the permissions, CloudWatch operations worked successfully.
-
-CloudTrail permissions were also reviewed when authorization errors occurred.
-
-This helped me understand how IAM permissions affect AWS services and how to troubleshoot AccessDenied errors.
-
-### 4. Docker Dependency Problem
-
-The application required AWS SDK dependencies.
-
-The original Dockerfile only installed the basic PHP database extensions.
-
-I updated the Dockerfile to install:
-
-- ZIP extension
-- Composer
-- Composer dependencies
-
-The Docker image could then install the required PHP packages during the build process.
-
-### 5. Jenkins Workspace and File Permissions
-
-Some backup files created during troubleshooting were owned by another user.
-
-When I attempted to delete them using the ubuntu user, Linux returned:
-
-Permission denied
-
-I used sudo to remove the unnecessary backup files.
-
-After cleanup, Git showed:
-
-nothing to commit, working tree clean
-
-This helped me understand the difference between application permissions, Linux file ownership and Git repository permissions.
+`Add AWS cloud DevOps integration`
 
 ## Verification
 
-### S3 Verification
+### S3
 
-S3 objects were successfully verified using:
+Complaint files were successfully uploaded and verified using AWS CLI.
 
-aws s3 ls s3://<bucket>/complaints/ --recursive
+Example:
 
-Complaint files were present in the bucket.
+`aws s3 ls s3://<bucket>/complaints/ --recursive`
 
-### SQS Verification
+### SQS
 
-SQS queue messages were successfully verified.
+Messages were successfully verified in the complaint event queue.
 
-The queue contained messages generated by the complaint application.
+Example result:
 
-### CloudWatch Verification
+`ApproximateNumberOfMessages: 2`
+
+### CloudWatch
 
 The following metrics were verified:
 
-- disk_used_percent
-- mem_used_percent
-- TestMetric
+- `disk_used_percent`
+- `mem_used_percent`
+- `TestMetric`
 
-### CloudTrail Verification
+Namespace:
 
-CloudTrail status was successfully verified.
+`ComplaintSystem/EC2`
 
-The trail returned:
+### CloudTrail
 
-IsLogging: true
+CloudTrail logging was verified successfully.
 
-The latest delivery time was also reported successfully.
+Example:
 
-### Docker Verification
-
-The application container was verified using:
-
-docker ps
-
-The running container:
-
-complaint-app
-
-was mapped to the application port.
-
-### Git Verification
-
-The final Git branch:
-
-aws-cloud-devops
-
-was successfully pushed to GitHub.
-
-The latest commit:
-
-4a3d3cd Add AWS cloud DevOps integration
-
-The local branch was confirmed to be synchronized with:
-
-origin/aws-cloud-devops
-
-## What I Learned
-
-Through this project I learned how different parts of a real cloud deployment work together.
-
-### AWS
-
-I learned how to work with:
-
-- EC2
-- RDS
-- S3
-- SQS
-- CloudWatch
-- CloudTrail
-- IAM
-- VPC
-- Application Load Balancer
-- Auto Scaling
+`IsLogging: true`
 
 ### Docker
 
-I learned how to:
+The application container was verified as running.
 
-- Create Docker images
-- Modify a Dockerfile
-- Install PHP extensions
-- Install Composer inside a container
-- Install application dependencies
-- Run containers
-- Troubleshoot container deployment
+Container:
 
-### Jenkins
+`complaint-app`
 
-I learned how Jenkins interacts with:
+The application was exposed through Docker port mapping.
 
-- GitHub
-- Git
+## Problems Faced and Solutions
+
+### 1. Git Dubious Ownership
+
+While working inside the Jenkins workspace, Git reported:
+
+`fatal: detected dubious ownership in repository`
+
+The problem occurred because the Jenkins workspace was owned by a different user.
+
+The repository was added as a Git safe directory:
+
+`git config --global --add safe.directory /var/lib/jenkins/workspace/complaint-ticket-management`
+
+### 2. Git Branch Permission Error
+
+When creating the DevOps branch, Git initially returned:
+
+`Unable to create ... aws-cloud-devops.lock: Permission denied`
+
+The `.git` directory had ownership issues.
+
+The problem was resolved by changing ownership of the Git metadata:
+
+`sudo chown -R ubuntu:ubuntu .git`
+
+The branch was then created successfully:
+
+`git switch -c aws-cloud-devops`
+
+### 3. Linux File Permission Problems
+
+Temporary backup files created during testing could not initially be removed because of file ownership and permission issues.
+
+The files were safely removed using elevated permissions:
+
+`sudo rm -f <backup-file>`
+
+The repository was then verified with:
+
+`git status`
+
+Result:
+
+`working tree clean`
+
+### 4. IAM Permission Issues
+
+During AWS configuration, some AWS CLI operations initially returned authorization errors.
+
+The required permissions were added to the EC2 IAM role where necessary.
+
+This allowed the EC2 instance to interact with the required AWS services without embedding AWS access keys in the application.
+
+### 5. CloudWatch Permission Issue
+
+CloudWatch metric publishing initially required additional IAM permissions.
+
+After updating the EC2 role permissions, CloudWatch metrics were successfully published and verified.
+
+### 6. Docker and Composer Integration
+
+The original Docker image required additional PHP dependencies for AWS SDK and Composer-based dependencies.
+
+The Dockerfile was updated to install the ZIP extension and Composer and to run:
+
+`composer install --no-dev --optimize-autoloader`
+
+This allowed the PHP application to use the required AWS SDK dependencies inside the container.
+
+## Key Learning
+
+This project provided hands-on experience with:
+
+- AWS cloud infrastructure
+- EC2 deployment
+- RDS database architecture
+- S3 object storage
+- SQS messaging
+- CloudWatch monitoring
+- CloudTrail auditing
+- IAM permissions
+- VPC networking
+- Application Load Balancer
+- Auto Scaling
 - Docker
-- EC2
+- Docker Compose
+- Jenkins CI/CD
+- Git and GitHub
+- Linux permissions
+- Troubleshooting AWS infrastructure
 
-I also learned that Jenkins workspaces can create Linux ownership and permission issues.
+The project also provided practical experience in diagnosing and resolving real deployment problems rather than only configuring services individually.
 
-### Git
+## Conclusion
 
-I learned:
+This project demonstrates the transformation of a PHP/MySQL complaint management application into a cloud-based DevOps deployment.
 
-- Git branches
-- Git commits
-- Git remotes
-- Git push
-- Detached HEAD situations
-- Git safe directories
-- Repository ownership problems
-- Working tree cleanup
+The final implementation combines application development with AWS infrastructure, containerization, CI/CD, monitoring, auditing, storage, messaging, load balancing, and scalability.
 
-### Linux
-
-I gained practical experience with:
-
-- Linux file permissions
-- File ownership
-- sudo
-- chown
-- Workspace directories
-- Process and container verification
-
-### Troubleshooting
-
-One of the most important things I learned was troubleshooting.
-
-Instead of only following commands, I had to identify why commands failed and then solve the underlying problem.
-
-Examples included:
-
-- IAM AccessDenied errors
-- Git dubious ownership
-- Git branch creation permission errors
-- Linux file permission errors
-- Docker dependency issues
-- AWS service integration issues
-
-## Final Result
-
-The original PHP/MySQL application was transformed into a cloud-based DevOps deployment.
-
-The final solution combines:
-
-PHP
-+
-MySQL / RDS
-+
-Docker
-+
-Jenkins
-+
-GitHub
-+
-EC2
-+
-S3
-+
-SQS
-+
-CloudWatch
-+
-CloudTrail
-+
-IAM
-+
-VPC
-+
-Application Load Balancer
-+
-Auto Scaling
-
-The project demonstrates not only deployment but also practical troubleshooting of cloud infrastructure, permissions, containers, CI/CD and AWS service integrations.
-
-## Future Improvements
-
-Possible future improvements include:
-
-- Implementing HTTPS using an SSL/TLS certificate
-- Adding automated testing to the Jenkins pipeline
-- Adding Docker image versioning
-- Adding more CloudWatch alarms
-- Adding centralized application logging
-- Implementing stronger CI/CD deployment strategies
-- Adding infrastructure as code using Terraform
-- Improving security and secret management
+The main focus was not only deploying the application, but also troubleshooting real infrastructure problems involving IAM permissions, Git ownership, Linux file permissions, Docker, Jenkins, and AWS service integration.
