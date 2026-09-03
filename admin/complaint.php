@@ -101,7 +101,7 @@ $stmt = $conn->prepare("
     SELECT *
     FROM complaint_attachments
     WHERE complaint_id = ?
-    ORDER BY created_at DESC
+    ORDER BY uploaded_at DESC
 ");
 
 $stmt->bind_param('i', $complaint_id);

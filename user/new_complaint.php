@@ -4,6 +4,14 @@ session_start();
 
 require_once __DIR__ . '/../config/database.php';
 
+$s3_config = require __DIR__ . '/../config/s3.php';
+$s3 = $s3_config['client'];
+$s3_bucket = $s3_config['bucket'];
+
+$sqs_config = require __DIR__ . '/../config/sqs.php';
+$sqs = $sqs_config['client'];
+$sqs_queue_url = $sqs_config['queue_url'];
+
 if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'user') {
     header('Location: login.php');
     exit;
@@ -197,13 +205,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($file_data !== null) {
 
-                if (!move_uploaded_file(
-                    $file_data['tmp_name'],
-                    $file_data['absolute_path']
-                )) {
+                $s3_key =
+                    'complaints/'
+                    . $complaint_id
+                    . '/'
+                    . $file_data['stored_name'];
+
+                try {
+
+                    $s3->putObject([
+                        'Bucket' => $s3_bucket,
+                        'Key' => $s3_key,
+                        'SourceFile' => $file_data['tmp_name'],
+                        'ContentType' => $file_data['mime']
+                    ]);
+
+                } catch (Throwable $e) {
 
                     throw new Exception(
-                        'Could not save uploaded file.'
+                        'Could not upload attachment to S3: '
+                        . $e->getMessage()
                     );
                 }
 
@@ -211,14 +232,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     INSERT INTO complaint_attachments
                     (
                         complaint_id,
-                        user_id,
                         original_name,
                         stored_name,
                         file_path,
-                        file_type,
+                        mime_type,
                         file_size
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 ");
 
                 if (!$stmt) {
@@ -226,12 +246,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $stmt->bind_param(
-                    'iissssi',
+                    'issssi',
                     $complaint_id,
-                    $user_id,
                     $file_data['original_name'],
                     $file_data['stored_name'],
-                    $file_data['relative_path'],
+                    $s3_key,
                     $file_data['mime'],
                     $file_data['size']
                 );
@@ -245,6 +264,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $conn->commit();
 
+            /*
+            |--------------------------------------------------------------------------
+            | Send complaint-created event to SQS
+            |--------------------------------------------------------------------------
+            */
+
+            try {
+
+                $sqs->sendMessage([
+                    'QueueUrl' => $sqs_queue_url,
+                    'MessageBody' => json_encode([
+                        'event' => 'complaint_created',
+                        'complaint_id' => $complaint_id,
+                        'user_id' => $user_id,
+                        'subject' => $subject,
+                        'category' => $category,
+                        'priority' => $priority,
+                        'status' => $status,
+                        'has_attachment' => ($file_data !== null),
+                        'created_at' => date('Y-m-d H:i:s')
+                    ])
+                ]);
+
+            } catch (Throwable $e) {
+
+                error_log(
+                    'SQS complaint event failed: ' .
+                    $e->getMessage()
+                );
+            }
+
             header(
                 'Location: complaint.php?id=' .
                 $complaint_id
@@ -256,13 +306,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $conn->rollback();
 
-            if (
-                isset($file_data)
-                && $file_data !== null
-                && file_exists($file_data['absolute_path'])
-            ) {
-                unlink($file_data['absolute_path']);
-            }
 
             $error = 'Unable to create complaint: ' . $e->getMessage();
         }

@@ -3,14 +3,20 @@ services:
   app:
     build: .
     container_name: complaint-app
+
     ports:
       - "8081:80"
+
     environment:
       DB_HOST: complaint-db.cxussu4cuthp.ap-south-2.rds.amazonaws.com
       DB_PORT: 3306
       DB_NAME: complaint_system
       DB_USER: complaintadmin
       DB_PASSWORD: 123456789
+      AWS_REGION: ap-south-2
+      S3_BUCKET: complaint-system-files-958295071309-2026
+
     volumes:
       - ./uploads:/var/www/html/uploads
+
     restart: unless-stopped
