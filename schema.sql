@@ -1,6 +1,8 @@
-CREATE TABLE IF NOT EXISTS complaints (
+DROP TABLE IF EXISTS complaints;
+
+CREATE TABLE complaints (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    complaintNumber INT,
+    complaintNumber INT UNIQUE,
     userId INT,
     user_id INT,
     category INT,
