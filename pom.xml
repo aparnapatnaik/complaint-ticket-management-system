@@ -26,12 +26,13 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
-                            <executable>php</executable>
-                            <arguments>
-                                <argument>-l</argument>
-                                <argument>index.php</argument>
-                            </arguments>
-                        </configuration>
+    <executable>echo</executable>
+    <arguments>
+        <argument>PHP project initialized for Maven build.</argument>
+    </arguments>
+</configuration>              
+
+
                     </execution>
                 </executions>
             </plugin>
