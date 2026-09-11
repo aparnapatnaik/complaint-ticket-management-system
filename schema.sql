@@ -8,6 +8,7 @@ CREATE TABLE complaints (
     category INT,
     subcategory VARCHAR(255),
     subject VARCHAR(255),
+    priority VARCHAR(50) DEFAULT 'Option 1',
     complaintType VARCHAR(255),
     state VARCHAR(255),
     noc VARCHAR(255),
