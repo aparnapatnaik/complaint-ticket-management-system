@@ -7,6 +7,7 @@ CREATE TABLE complaints (
     user_id INT,
     category INT,
     subcategory VARCHAR(255),
+    subject VARCHAR(255),
     complaintType VARCHAR(255),
     state VARCHAR(255),
     noc VARCHAR(255),
